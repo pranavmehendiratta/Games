@@ -1,0 +1,173 @@
+# importing modules
+import simplegui
+import random
+
+# Initializing global variables
+WIDTH = 600
+HEIGHT = 400
+BALL_RADIUS = 20
+PAD_WIDTH = 8
+PAD_HEIGHT = 80
+HALF_PAD_WIDTH = PAD_WIDTH / 2
+HALF_PAD_HEIGHT = PAD_HEIGHT / 2
+ball_pos = [WIDTH / 2, HEIGHT / 2]
+ball_vel = [0, 0]
+paddle1_pos = [HEIGHT/2 - HALF_PAD_HEIGHT, HEIGHT/2 + HALF_PAD_HEIGHT]
+paddle2_pos = [HEIGHT/2 - HALF_PAD_HEIGHT, HEIGHT/2 + HALF_PAD_HEIGHT]
+paddle1_vel = 0 
+paddle2_vel = 0
+score1 = 0
+score2 = 0
+
+""" To increase the speed of ball periodically in the game."""
+counter = 0
+
+""" To spawn ball to player who one last point."""
+spawn_counter = 0
+
+
+
+# define event handlers
+def spawn_ball(direction):
+    global ball_vel
+    if direction == 'LEFT':
+        ball_vel[0] = -ball_vel[0]
+    elif direction == 'RIGHT':
+        ball_vel[0] = -ball_vel[0]        
+
+def new_game():
+    global ball_vel, ball_pos, counter, spawn_counter 
+    ball_pos = [WIDTH / 2, HEIGHT / 2]
+    counter = 0
+    """ using random.randrange() to determine speed of the ball 
+    between [1, 5) and not using suggested speed values"""
+    if spawn_counter > 0:
+        ball_vel[0] = -random.randrange(1, 5)
+        ball_vel[1] = -random.randrange(1, 5)
+    else:
+        ball_vel[0] = random.randrange(1, 5)
+        ball_vel[1] = -random.randrange(1, 5)
+    spawn_counter = 0
+    
+def button_handler():
+    global paddle1_vel, paddle2_vel, score1, score2, counter, spawn_counter
+    global ball_vel, paddle1_pos, paddle2_pos
+    paddle1_vel = 0 
+    paddle2_vel = 0
+    score1 = 0
+    score2 = 0
+    counter = 0
+    spawn_counter = 0
+    ball_vel = [0, 0]
+    paddle1_pos = [HEIGHT/2 - HALF_PAD_HEIGHT, HEIGHT/2 + HALF_PAD_HEIGHT]
+    paddle2_pos = [HEIGHT/2 - HALF_PAD_HEIGHT, HEIGHT/2 + HALF_PAD_HEIGHT]
+    new_game()
+    
+def draw(canvas):
+    
+    global score1, score2, paddle1_pos, paddle2_pos, ball_pos, ball_vel, paddle1_vel, paddle2_vel, counter
+    global spawn_counter
+    
+    # draw mid line and gutters line
+    canvas.draw_line([WIDTH / 2, 0],[WIDTH / 2, HEIGHT], 1, "White")
+    canvas.draw_line([PAD_WIDTH, 0],[PAD_WIDTH, HEIGHT], 1, "White")
+    canvas.draw_line([WIDTH - PAD_WIDTH, 0],[WIDTH - PAD_WIDTH, HEIGHT], 1, "White")
+
+    # Update ball position
+    ball_pos[0] += ball_vel[0]
+    ball_pos[1] += ball_vel[1]
+
+    # Draw ball
+    canvas.draw_circle(ball_pos, BALL_RADIUS, 2, "Green", "White")
+
+    # update paddle's vertical position, keep paddle on the screen
+    if paddle1_pos[1] <= HEIGHT - 1 and paddle1_pos[0] >= 0:
+        paddle1_pos[1] += paddle1_vel
+        paddle1_pos[0] += paddle1_vel    
+    elif paddle1_pos[0] < 0  :
+        paddle1_pos[1] = PAD_HEIGHT
+        paddle1_pos[0] = 0
+    elif paddle1_pos[1] > HEIGHT - 1 :
+        paddle1_pos[1] = HEIGHT -1
+        paddle1_pos[0] = HEIGHT - 1 - PAD_HEIGHT
+    if paddle2_pos[1] <= HEIGHT - 1 and paddle2_pos[0] >= 0:
+        paddle2_pos[1] += paddle2_vel
+        paddle2_pos[0] += paddle2_vel    
+    elif paddle2_pos[0] < 0 :
+        paddle2_pos[1] = PAD_HEIGHT
+        paddle2_pos[0] = 0
+    elif paddle2_pos[1] > HEIGHT - 1 :
+        paddle2_pos[1] = HEIGHT -1
+        paddle2_pos[0] = HEIGHT - 1 - PAD_HEIGHT       
+    
+    # draw paddles
+    canvas.draw_polygon([[WIDTH - HALF_PAD_WIDTH , paddle1_pos[0]], [WIDTH , paddle1_pos[0]], [WIDTH , paddle1_pos[1]], [WIDTH - HALF_PAD_WIDTH , paddle1_pos[1]]], 12, 'Red', 'Red')
+    canvas.draw_polygon([[0, paddle2_pos[0]], [HALF_PAD_WIDTH, paddle2_pos[0]], [HALF_PAD_WIDTH , paddle2_pos[1]], [0, paddle2_pos[1]]], 12, 'Blue', 'Blue')     
+    
+    #checking collision of ball off top and bottom surfaces of canvas
+    if ball_pos[1] <= BALL_RADIUS :
+        ball_vel[1] = - ball_vel[1]
+    elif ball_pos[1] >= HEIGHT - 1 - BALL_RADIUS:
+        ball_vel[1] = - ball_vel[1]
+    
+    # determine whether paddle and ball collide
+    if ball_vel[0] > 0:
+        if ball_pos[0] > WIDTH - 1 - PAD_WIDTH - BALL_RADIUS:
+            if ball_pos[1] >= paddle1_pos[0] and ball_pos[1] <= paddle1_pos[1]:
+                spawn_ball('LEFT')
+                counter += 1
+    else:        	 
+        if ball_pos[0] < PAD_WIDTH + BALL_RADIUS: 
+            if ball_pos[1] >= paddle2_pos[0] and ball_pos[1] <= paddle2_pos[1]:
+                spawn_ball('RIGHT')
+                counter += 1
+    
+    # increasing the speed of the ball after hitting with gutter
+    if counter % 5 == 0:
+        ball_vel[0] += (0.005 * ball_vel[0])
+        ball_vel[1] += (0.005 * ball_vel[1])
+    
+    # draw scores
+    if ball_pos[0] > WIDTH - HALF_PAD_WIDTH - BALL_RADIUS:
+        score2 += 1
+        spawn_counter += 1
+        new_game()
+    elif ball_pos[0] < HALF_PAD_WIDTH + BALL_RADIUS :
+        score1 += 1
+        new_game()
+    canvas.draw_text("Score : " + str(score1), [WIDTH - 1 - 90, 20 ], 20, 'White')
+    canvas.draw_text("Score : " + str(score2), [20, 20], 20, 'White')
+    
+def keydown(key):
+    global paddle1_vel, paddle2_vel, paddle1_pos, paddle2_pos, ball_vel
+    if key == simplegui.KEY_MAP['down']:
+        paddle1_vel += 10     
+    elif key == simplegui.KEY_MAP['up']:
+        paddle1_vel -= 10 
+    elif key == simplegui.KEY_MAP['w']:
+        paddle2_vel -= 10 
+    elif key == simplegui.KEY_MAP['s']:
+        paddle2_vel += 10 
+        
+def keyup(key):
+    global paddle1_vel, paddle2_vel, paddle1_pos, paddle2_pos
+    if key == simplegui.KEY_MAP['down']:
+        paddle1_vel = 0     
+    elif key == simplegui.KEY_MAP['up']:
+        paddle1_vel = 0
+    elif key == simplegui.KEY_MAP['w']:
+        paddle2_vel = 0
+    elif key == simplegui.KEY_MAP['s']:
+        paddle2_vel = 0
+    
+# create frame
+frame = simplegui.create_frame("Pong", WIDTH, HEIGHT)
+frame.set_draw_handler(draw)
+frame.set_keydown_handler(keydown)
+frame.set_keyup_handler(keyup)
+frame.add_button("Restart", button_handler)
+
+# start frame
+frame.start()
+new_game()
+

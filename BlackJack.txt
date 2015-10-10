@@ -1,0 +1,236 @@
+# importing packages
+import simplegui
+import random
+
+# Card dimensions and images
+CARD_SIZE = (72, 96)
+CARD_CENTER = (36, 48)
+card_images = simplegui.load_image("http://storage.googleapis.com/codeskulptor-assets/cards_jfitz.png")
+
+CARD_BACK_SIZE = (72, 96)
+CARD_BACK_CENTER = (36, 48)
+card_back = simplegui.load_image("http://storage.googleapis.com/codeskulptor-assets/card_jfitz_back.png")    
+
+# initialize some useful global variables
+in_play = False
+outcome_player = ""
+outcome_dealer = ""
+color_dealer = "Black"
+color_player = "Black"
+score = 0
+draw_counter = 0
+card_counter = 0
+dealer_counter = True
+score_color = "Aqua"
+
+# define globals for cards
+SUITS = ('C', 'S', 'H', 'D')
+RANKS = ('A', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K')
+VALUES = {'A':1, '2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, 'T':10, 'J':10, 'Q':10, 'K':10}
+
+
+# define card class
+class Card:
+    def __init__(self, suit, rank):
+        if (suit in SUITS) and (rank in RANKS):
+            self.suit = suit
+            self.rank = rank
+        else:
+            self.suit = None
+            self.rank = None
+            print "Invalid card: ", suit, rank
+
+    def __str__(self):
+        return self.suit + self.rank
+
+    def get_suit(self):
+        return self.suit
+
+    def get_rank(self):
+        return self.rank
+
+    def draw(self, canvas, pos):
+        global card_counter, in_play, dealer_counter
+        if not in_play:
+            dealer_counter = False
+        if dealer_counter:
+                pos[0] += 100
+                dealer_counter = False
+                canvas.draw_image(card_back, CARD_BACK_CENTER, CARD_SIZE, [pos[0] + CARD_CENTER[0], pos[1] + CARD_CENTER[1]], CARD_BACK_SIZE)
+        else:
+            if card_counter == 3:
+                pos[1] += 100
+                pos[0] = 0
+            pos[0] += 100
+            card_loc = (CARD_CENTER[0] + CARD_SIZE[0] * RANKS.index(self.rank), 
+                CARD_CENTER[1] + CARD_SIZE[1] * SUITS.index(self.suit))
+            canvas.draw_image(card_images, card_loc, CARD_SIZE, [pos[0] + CARD_CENTER[0], pos[1] + CARD_CENTER[1]], CARD_SIZE)
+        
+            
+# define hand class
+class Hand:
+    def __init__(self):
+        self.hand = list()
+        self.val = 0
+
+    def __str__(self):
+        result = ''
+        for card in self.hand:
+            result = result + str(card) + ' '
+        return "Hand contains " + result
+
+    def add_card(self, card):
+        self.hand.append(card)
+        
+    def get_value(self):
+        self.val = 0
+        for card in self.hand:
+            self.val = self.val + VALUES[card.get_rank()]
+            if card.get_rank() == "A":
+                if self.val + 10 <= 21:
+                    self.val += 10
+        return str(self.val)
+   
+    def draw(self, canvas, pos):
+        for card in self.hand:
+            card.draw(canvas, pos)
+ 
+        
+# define deck class 
+class Deck:
+    def __init__(self):
+        self.deck = list()
+        for suit in SUITS:
+            for rank in RANKS:
+                card = Card(suit, rank)
+                self.deck.append(card)
+
+    def shuffle(self):
+        random.shuffle(self.deck)
+
+    def deal_card(self):
+        for card in self.deck:
+            i = self.deck.index(card)
+            break
+        return self.deck.pop(i)
+
+    def __str__(self):
+        deck = ''
+        for card in self.deck:
+            deck = deck + str(card) + ' '
+        return "Deck Contains " + deck
+
+# Initialising some more global variable
+deck = Deck()
+player = Hand()
+dealer = Hand()
+
+# Fuction to decide the winner
+def winner():
+    global in_play, deck, player, dealer, outcome_player, score, color_player, score_color, card_counter, color_dealer, outcome_dealer
+    if int(dealer.get_value()) > 21:
+        outcome_player = "Won!"
+        outcome_dealer = "Busted"
+        color_player = "White"
+        color_dealer = "Orange"
+        in_play = False
+        score += 1
+        score_color = "White"
+    elif int(dealer.get_value()) >= int(player.get_value()):
+        outcome_dealer = "Won!"
+        color_dealer = "White"
+        outcome_player = "Lost!"
+        color_player = "Red"
+        score -= 1
+        in_play = False
+        score_color = "Red"
+    elif int(dealer.get_value()) < int(player.get_value()):
+        outcome_dealer = "Lost!"
+        color_dealer = "Red"
+        outcome_player = "Won!"
+        color_player = "White"
+        score +=1
+        in_play = False  
+        score_color = "White"    
+
+#define event handlers for buttons
+def deal():
+    global outcome, in_play, deck, player, dealer, outcome_player, outcome_dealer, score_color, color_player, color_dealer, score
+    if not in_play:
+        deck = Deck()
+        player = Hand()
+        dealer = Hand()
+        deck.shuffle()
+        outcome_dealer = "Waiting..."
+        outcome_player = "Hit or Stand?"
+        color_player = "Black"
+        color_dealer = "Black"
+        score_color = "Aqua"
+        player.add_card(deck.deal_card())
+        player.add_card(deck.deal_card())
+        dealer.add_card(deck.deal_card())
+        dealer.add_card(deck.deal_card())
+        in_play = True
+    elif in_play:
+        outcome_dealer = "Won!"
+        color_dealer = "White"
+        outcome_player = "Lost!"
+        color_player = "Red"
+        score -= 1
+        in_play = False
+        score_color = "Red"
+        
+def hit():
+    global in_play, deck, player, dealer, outcome_player, score, score_color, color_player, card_counter, outcome_dealer, color_dealer
+    card_counter = 0
+    if in_play:
+        if int(player.get_value()) <= 21:
+            player.add_card(deck.deal_card())
+            card_counter += 1
+        if int(player.get_value()) > 21:
+            outcome_player = "Busted"
+            outcome_dealer = "Won!"
+            color_player = "Orange"
+            color_dealer = "White"
+            in_play = False
+            score -= 1
+            score_color = "Red"
+
+def stand():
+    global in_play, deck, player, dealer, outcome_player, score, color_player, card_counter, color_dealer, outcome_dealer
+    card_counter = 0
+    if in_play:
+        if int(dealer.get_value()) <= 17: 
+            dealer.add_card(deck.deal_card())          	
+            winner()
+        else:
+            winner()
+
+# draw handler    
+def draw(canvas):
+    global player, dealer, deck, outcome_player, outcome_dealer, draw_counter, score_color, color_dealer, color_player, dealer_counter
+    canvas.draw_text("BlackJack", [100, 50], 40, "Blue")
+    canvas.draw_text("Score : " + str(score), [400, 50], 30, score_color)
+    canvas.draw_text("Dealer Hand", [100, 100], 30, "Black")
+    canvas.draw_text("Player Hand", [100, 350], 30, "Black")
+    canvas.draw_text("Status :", [300,100], 30, "Black")
+    canvas.draw_text("Status :", [300,350], 30, "Black")
+    canvas.draw_text(outcome_player, [400, 350], 30, color_player)
+    canvas.draw_text(outcome_dealer, [400, 100], 30, color_dealer)
+    dealer_counter = True
+    dealer.draw(canvas, [0, 120])
+    player.draw(canvas, [0, 370])
+    
+# initialization frame
+frame = simplegui.create_frame("Blackjack", 600, 600)
+frame.set_canvas_background("Green")
+
+#create buttons and canvas callback
+frame.add_button("Deal", deal, 200)
+frame.add_button("Hit",  hit, 200)
+frame.add_button("Stand", stand, 200)
+frame.set_draw_handler(draw)
+
+# get things rolling
+deal()
+frame.start()
