@@ -1,3 +1,5 @@
+Link to online game: http://www.codeskulptor.org/#save2_TO61VVTKZy.py
+
 # importing packages
 import simplegui
 import random
