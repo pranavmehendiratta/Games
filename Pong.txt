@@ -1,3 +1,7 @@
+Link to online game: http://www.codeskulptor.org/#user39_3wxI6Qhrx1_8.py
+
+SOURCE CODE:
+
 # importing modules
 import simplegui
 import random
